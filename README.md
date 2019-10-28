@@ -1,1 +1,3 @@
 # Processor
+
+node index.js
