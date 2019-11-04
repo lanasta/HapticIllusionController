@@ -8,13 +8,22 @@ var dgram = require('dgram');
 const server = dgram.createSocket('udp4');
 let lastCoords = [];
 let timeout = 0;
+let timeoutFunc =  null;
+
 
 app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname + '/index.html'));
 });
 
 app.post('/api/setFriction/:frictionValue', async (req, res) => {
+    if (timeout != req.params.frictionValue) {
+        clearTimeout(timeoutFunc);
+    }
     timeout = req.params.frictionValue;
+})
+
+app.get('/api/currentPosition', async (req, res) => {
+    res.json(lastCoords);
 })
 
 server.on('listening', function() {
@@ -25,7 +34,7 @@ server.on('listening', function() {
 server.on('message', function(message, remote) {
     const msg = message.toString();
     const xyCoords = parseMessage(msg);
-    setTimeout(function() {
+    timeoutFunc = setTimeout(function() {
         sendItBack(xyCoords);
     }, timeout);
 });

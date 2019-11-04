@@ -17,7 +17,7 @@
         font-family: 'Roboto',-apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
         
     }
-    div {
+    .wrapper {
         width: 80%;
         margin: 5em auto;
         padding: 2em;
@@ -25,9 +25,10 @@
         border-radius: 0.2em;
         box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
     }
-    a:link, a:visited {
-        color: #38488f;
-        text-decoration: none;
+
+    #hapticVector {
+        width: 300px;
+        height: 300px;
     }
 
     .slider {
@@ -56,6 +57,20 @@
         border-radius: 50%;
     }
 
+    .canvasjs-chart-credit {
+        color:white !important;
+    }
+    
+    #trialBlocker {
+        background:white ;
+        z-index:2000;
+        width: 150px;
+        height: 40px;
+        top: 62vh;
+        position: absolute;
+        left: 8vw;
+    }
+
     @media (max-width: 700px) {
         div {
             margin: 0 auto;
@@ -63,18 +78,66 @@
         }
     }
     </style>   
-    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.js"></script>
+    <script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
     <script>
-        
         $(document).ready(function(){
             const correspondingDelays = {
                 0: 0,
                 1: 200,
                 2: 400,
                 3: 600,
-                4: 800,
-                5: 1000
+                4: 800
             }
+            let lastCoords = [null, null];
+            var chart = new CanvasJS.Chart("hapticVector", {
+                toolTip:{
+                    enabled: false,
+                },
+                axisX:{
+                title: "",
+                gridThickness: 0,
+                tickLength: 0,
+                lineThickness: 0,
+                labelFormatter: function(){
+                return " ";
+                },
+                minimum: -1,
+                    maximum: 1,
+                    stripLines:[
+                        {             
+                            color:"black",
+                            value: 0
+                        }
+                        ] 
+                },
+                axisY:{
+                title: "",
+                    gridThickness: 0,
+                tickLength: 0,
+                lineThickness: 0,
+                labelFormatter: function(){
+                return " ";
+                },
+                minimum: -1,
+                    maximum: 1,
+                    stripLines:[
+                        {            
+                            color:"black",
+                            value: 0
+                        }
+                    ] 
+                },
+
+                data: [
+                    {
+                        markerSize: 25,
+                        type: "line",
+                        dataPoints: null
+                    }
+                ]
+            });
+            chart.render();
+
             $('input[type=range]').on('input', function () {
                 $(this).trigger('change');
             });
@@ -83,39 +146,29 @@
                 changeFrictionValue(correspondingDelays[$(this).val()]);
             });
 
-            var ctx = document.getElementById('hapticVector').getContext('2d');
-            var myChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: 'Haptic Vector',
-                    data: [[0, 1]],
-                    pointBackgroundColor: 'black',
-                    pointRadius: 5,
-                    fill: false,
-                    showLine: false
-                }]
-            },
-            options : {
-                responsive: true,
-                scales: {
-                    xAxes: [{
-                        display: true,
-                        ticks: {
-                            suggestedMin: -1,
-                            suggestedMax: 1
+            window.setInterval(function(){
+                getCurrentPos();
+            }, 50);
+
+            function getCurrentPos() {
+                let xhr = new XMLHttpRequest();
+                xhr.open('GET', '/api/currentPosition/');
+                xhr.send();
+                xhr.onload = function() {
+                    if (xhr.status != 200) { // analyze HTTP status of the response
+                        alert(`Error ${xhr.status}: ${xhr.statusText}`); // e.g. 404: Not Found
+                    } else { // show the result
+                        var result = JSON.parse(xhr.response);
+                        console.log(result);
+                        if (result.length < 1) {
+                            return;
                         }
-                    }],
-                    yAxes: [{
-                        display: true,
-                        ticks: {
-                            suggestedMin: -1,
-                            suggestedMax: 1
-                        }
-                    }]
+                        lastCoords = [result[0], result[1]];
+                        chart.options.data[0].dataPoints = [{x: parseFloat(result[0]), y: parseFloat(result[1])}];
+                        chart.render();	
+                    }
                 }
-            }
-            });
+            }            
 
             function changeFrictionValue(frictionValue){
                 var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
@@ -129,12 +182,12 @@
 </head>
 
 <body>
-<div>
+<div class="wrapper">
     <h1>Haptic Illusion Feedback Controller</h1>
-    <canvas id="hapticVector"></canvas>
+    <div id="trialBlocker"></div>
+    <div id="hapticVector"></div>
     <p>Feedback Friction: <span id="frictionValue">0</span></p>
-    <input type="range" min="0" max="5" value="0" class="slider" id="frictionSlider">
-    
+    <input type="range" min="0" max="4" value="0" class="slider" id="frictionSlider">
 </div>
 </body>
 </html>
