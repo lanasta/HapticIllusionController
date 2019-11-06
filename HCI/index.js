@@ -7,8 +7,7 @@ const app = express();
 var dgram = require('dgram');
 const server = dgram.createSocket('udp4');
 let lastCoords = [];
-let timeout = 0;
-let timeoutFunc =  null;
+let frictionValue = 1;
 
 
 app.get('/', function(req, res) {
@@ -16,10 +15,7 @@ app.get('/', function(req, res) {
 });
 
 app.post('/api/setFriction/:frictionValue', async (req, res) => {
-    if (timeout != req.params.frictionValue) {
-        clearTimeout(timeoutFunc);
-    }
-    timeout = req.params.frictionValue;
+    frictionValue = req.params.frictionValue;
 })
 
 app.get('/api/currentPosition', async (req, res) => {
@@ -28,15 +24,13 @@ app.get('/api/currentPosition', async (req, res) => {
 
 server.on('listening', function() {
   var address = server.address();
- console.log('UDP Server listening on ' + address.address + ':' + address.port);
+  console.log('UDP Server listening on ' + address.address + ':' + address.port);
 });
 
 server.on('message', function(message, remote) {
     const msg = message.toString();
     const xyCoords = parseMessage(msg);
-    timeoutFunc = setTimeout(function() {
-        sendItBack(xyCoords);
-    }, timeout);
+    sendItBack(xyCoords);
 });
 
 server.bind(PORT, HOST);
@@ -49,7 +43,8 @@ function parseMessage(msg){
 
 function sendItBack(xyCoords) {
     if (JSON.stringify(lastCoords) == JSON.stringify(xyCoords)) return;
-    var message = new Buffer("F: " + xyCoords[0] + ", " + xyCoords[1]);
+    console.log("F: " + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
+    var message = new Buffer("F: " + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
     server.send(message, 0, message.length, "8888", HOST, function(err, bytes) {
         if (err) throw err;
         console.log('UDP message ' +  message.toString() + ' sent to ' + HOST +':'+ PORT);
