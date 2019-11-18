@@ -17,6 +17,27 @@
             $( "#draggable" ).draggable({ revert: true, containment: "#boxBounds", scroll: false });
             $( "#draggable2" ).draggable({ revert: true, helper: "clone" });
 
+            $('#draggable').draggable({
+                containment: "#boxBounds",
+                drag: function() {
+                    var offset = $(this).position();
+                    getMarkerPos(offset);
+                },
+                stop: function() {
+                    var offset = $(this).position();
+                    getMarkerPos(offset);
+                }
+            });
+
+            getMarkerPos($("#draggable").position());
+
+            function getMarkerPos(offset) {
+                var xPos = parseFloat(offset.left/100);
+                var yPos = parseFloat((0 - offset.top)/100);
+                $('#posX').text('x: ' + xPos.toFixed(2));
+                $('#posY').text('y: ' + yPos.toFixed(2));
+            }
+ 
             $('#setBoundaries').click(() => {
                 var xmin = $("#xmin").val();
                 var xmax = $("#xmax").val();
@@ -138,6 +159,8 @@
             </div>
       </div>
     <div id="settings">
+        <span id="posX"></span>
+        <span id="posY"></span>
         <table>
         <tr>
             <td>
