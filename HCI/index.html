@@ -7,80 +7,24 @@
     <meta charset="utf-8" />
     <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" href="/css/style.css" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700i,900&display=swap" rel="stylesheet">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
-    <style type="text/css">
-    body {
-        background-color: #f0f0f2;
-        margin: 0;
-        padding: 0;
-        font-family: 'Roboto',-apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
-        
-    }
-    .wrapper {
-        width: 80%;
-        margin: 5em auto;
-        padding: 2em;
-        background-color: #fdfdff;
-        border-radius: 0.2em;
-        box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
-    }
-
-    #hapticVector {
-        width: 300px;
-        height: 300px;
-    }
-
-    .slider {
-        -webkit-appearance: none;
-        width: 100%;
-        height: 15px;
-        background: #d3d3d3;
-        outline: none;
-        opacity: 0.7;
-        -webkit-transition: .2s;
-        transition: opacity .2s;
-        border-radius: 20px;
-    }
-
-    .slider:hover {
-        opacity: 1;
-    }
-
-    .slider::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        appearance: none;
-        width: 25px;
-        height: 25px;
-        background: #b2193c;
-        cursor: pointer;
-        border-radius: 50%;
-    }
-
-    .canvasjs-chart-credit {
-        color:white !important;
-    }
-    
-    #trialBlocker {
-        background:white ;
-        z-index:2000;
-        width: 150px;
-        height: 40px;
-        top: 62vh;
-        position: absolute;
-        left: 8vw;
-    }
-
-    @media (max-width: 700px) {
-        div {
-            margin: 0 auto;
-            width: auto;
-        }
-    }
-    </style>   
-    <script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+    <link rel="stylesheet" href="css/jquery-ui.css">
+    <script src="js/jquery-1.12.4.js"></script>
+    <script src="js/jquery-ui.js"></script>
     <script>
         $(document).ready(function(){
+            $( "#draggable" ).draggable({ revert: true, containment: "#boxBounds", scroll: false });
+            $( "#draggable2" ).draggable({ revert: true, helper: "clone" });
+
+            $('#setBoundaries').click(() => {
+                var xmin = $("#xmin").val();
+                var xmax = $("#xmax").val();
+                var ymin = $("#ymin").val();
+                var ymax = $("#ymax").val();
+                var valArr = checkBoundaryValues(xmin, xmax, ymin, ymax);
+                changeBoundaryValues(valArr);
+            })
             const correspondingHardness = {
                 0: 1,
                 1: 2,
@@ -89,54 +33,6 @@
                 4: 5
             }
             let lastCoords = [null, null];
-            var chart = new CanvasJS.Chart("hapticVector", {
-                toolTip:{
-                    enabled: false,
-                },
-                axisX:{
-                title: "",
-                gridThickness: 0,
-                tickLength: 0,
-                lineThickness: 0,
-                labelFormatter: function(){
-                return " ";
-                },
-                minimum: -1,
-                    maximum: 1,
-                    stripLines:[
-                        {             
-                            color:"black",
-                            value: 0
-                        }
-                        ] 
-                },
-                axisY:{
-                title: "",
-                    gridThickness: 0,
-                tickLength: 0,
-                lineThickness: 0,
-                labelFormatter: function(){
-                return " ";
-                },
-                minimum: -1,
-                    maximum: 1,
-                    stripLines:[
-                        {            
-                            color:"black",
-                            value: 0
-                        }
-                    ] 
-                },
-
-                data: [
-                    {
-                        markerSize: 25,
-                        type: "line",
-                        dataPoints: null
-                    }
-                ]
-            });
-            chart.render();
 
             $('input[type=range]').on('input', function () {
                 $(this).trigger('change');
@@ -146,9 +42,50 @@
                 changeFrictionValue(correspondingHardness[$(this).val()]);
             });
 
-            window.setInterval(function(){
-                getCurrentPos();
-            }, 50);
+
+            // window.setInterval(function(){
+            //     getCurrentPos();
+            // }, 50);
+
+            function checkBoundaryValues(){
+                var xmin = $("#xmin").val() || -1;
+                var xmax = $("#xmax").val() || 1;
+                var ymin = $("#ymin").val() || -1;
+                var ymax = $("#ymax").val() || 1;
+                var warningMsg = '';
+                if (xmin < -1) {
+                    xmin = -1;
+                    warningMsg = "Please check your boundary values.";
+                } 
+                if (ymin < -1) {
+                    ymin = -1;
+                    warningMsg = "Please check your boundary values.";
+                }
+                if (xmax > 1) {
+                    xmax = 1;
+                    warningMsg = "Please check your boundary values.";
+                }
+                if (ymax > 1) {
+                    ymax = 1;
+                    warningMsg = "Please check your boundary values.";
+                }
+                if (xmin > xmax || xmax < xmin) {
+                    xmin = -1;
+                    xmax = 1;
+                    warningMsg = "Please check your boundary values.";
+                }
+                if (ymin > ymax || ymax < ymin) {
+                    ymin = -1;
+                    ymax = 1;
+                    warningMsg = "Please check your boundary values.";
+                }
+                $("#xmin").val(xmin);
+                $("#xmax").val(xmax);
+                $("#ymin").val(ymin);
+                $("#ymax").val(ymax);
+                $("#warningMsg").html(warningMsg);
+                return [xmin, xmax, ymin, ymax];
+            } 
 
             function getCurrentPos() {
                 let xhr = new XMLHttpRequest();
@@ -158,24 +95,32 @@
                     if (xhr.status != 200) { // analyze HTTP status of the response
                         alert(`Error ${xhr.status}: ${xhr.statusText}`); // e.g. 404: Not Found
                     } else { // show the result
-                        var result = JSON.parse(xhr.response);
+                        let result = JSON.parse(xhr.response);
                         console.log(result);
                         if (result.length < 1) {
                             return;
                         }
                         lastCoords = [result[0], result[1]];
-                        chart.options.data[0].dataPoints = [{x: parseFloat(result[0]), y: parseFloat(result[1])}];
-                        chart.render();	
+                        
                     }
                 }
             }            
 
             function changeFrictionValue(frictionValue){
-                var xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
-                var url = '/api/setFriction/' + frictionValue;
+                let xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
+                let url = '/api/setFriction/' + frictionValue;
                 xmlhttp.open("POST", url);
                 xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
                 xmlhttp.send();   
+            }
+
+            function changeBoundaryValues(valArray) {
+                console.log(valArray);
+                let xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
+                let url = '/api/setBoundaries/';
+                xmlhttp.open("POST", url);
+                xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
+                xmlhttp.send(JSON.stringify(valArray));   
             }
         });
     </script>
@@ -184,10 +129,39 @@
 <body>
 <div class="wrapper">
     <h1>Haptic Illusion Feedback Controller</h1>
-    <div id="trialBlocker"></div>
-    <div id="hapticVector"></div>
-    <p>Feedback Friction: <span id="frictionValue">0</span></p>
-    <input type="range" min="0" max="4" value="0" class="slider" id="frictionSlider">
+    <div id="markerbounds">
+        <div id="boxBounds"></div>
+            <div id="box">
+                <div id="draggable">
+                    <div id="marker"></div>
+                </div>
+            </div>
+      </div>
+    <div id="settings">
+        <table>
+        <tr>
+            <td>
+                <p>x-min(-1 to 1): <input type='text' id='xmin' value='-1'></input></p>
+            </td>
+            <td>
+                <p>x-max(>x-min to 1): <input type='text' id='xmax' value='1'></input></p>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <p>y-min(-1 to 1): <input type='text' id='ymin' value='-1'></input></p>
+            </td>
+            <td>
+                <p>y-max(>y-min to 1): <input type='text' id='ymax' value='1'></input></p>
+            </td>
+        </tr>
+         </table>
+         <button id='setBoundaries'>Set boundary values</button>
+         <span id='warningMsg'></span>
+
+        <p>Feedback Friction: <span id="frictionValue">0</span></p>
+        <input type="range" min="0" max="4" value="0" class="slider" id="frictionSlider">
+    </div>
 </div>
 </body>
 </html>
