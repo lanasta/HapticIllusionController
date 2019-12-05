@@ -14,14 +14,19 @@
     <script src="js/jquery-ui.js"></script>
     <script>
         $(document).ready(function(){
+            var boundaries = [-1, 1, -1, 1];
             $( "#draggable" ).draggable({ revert: true, containment: "#boxBounds", scroll: false });
             $( "#draggable2" ).draggable({ revert: true, helper: "clone" });
 
             $('#draggable').draggable({
+                revertDuration: 50,
+                distance: 20,
                 containment: "#boxBounds",
-                drag: function() {
+                cursor: 'pointer',
+                drag: function(event, ui) {
                     var offset = $(this).position();
-                    getMarkerPos(offset);
+                    getMarkerPos(offset); 
+                    console.log($("#draggable").draggable( "option", "distance"));
                 },
                 stop: function() {
                     var offset = $(this).position();
@@ -29,7 +34,13 @@
                 }
             });
 
-            getMarkerPos($("#draggable").position());
+            setup();
+
+            function setup() {
+                getMarkerPos($("#draggable").position());
+                changeFrictionValue(1);
+                changeBoundaryValues(boundaries);
+            }
 
             function getMarkerPos(offset) {
                 var xPos = parseFloat(offset.left/100);
@@ -53,20 +64,32 @@
                 3: 4,
                 4: 5
             }
-            let lastCoords = [null, null];
+            let lastCoords = [0,0];
 
             $('input[type=range]').on('input', function () {
                 $(this).trigger('change');
             });
             $('#frictionSlider').change( function() { 
                 $("#frictionValue").text($(this).val());
-                changeFrictionValue(correspondingHardness[$(this).val()]);
+                var frictionVal = correspondingHardness[$(this).val()];
+                var offset =  $("#draggable").position();
+                $("#draggable").css({'top': offset.top/frictionVal, 'left' : offset.left/frictionVal});
+                $("#draggable").draggable({distance: 20/frictionVal});
+                changeFrictionValue(frictionVal);
             });
 
+            window.setInterval(function(){
+                getCurrentPos();
+            }, 30);
 
-            // window.setInterval(function(){
-            //     getCurrentPos();
-            // }, 50);
+            function moveMarker() {
+                var left =  lastCoords[0] * 100;
+                var top = lastCoords[1] * 100;
+                $("#draggable").animate(
+                    { left: left, top: top }, 
+                    { duration: 5, progress: function(draggable, x, y ){}
+                });
+            }
 
             function checkBoundaryValues(){
                 var xmin = $("#xmin").val() || -1;
@@ -110,7 +133,7 @@
 
             function getCurrentPos() {
                 let xhr = new XMLHttpRequest();
-                xhr.open('GET', '/api/currentPosition/');
+                xhr.open('GET', '/api/currentPosition');
                 xhr.send();
                 xhr.onload = function() {
                     if (xhr.status != 200) { // analyze HTTP status of the response
@@ -122,7 +145,7 @@
                             return;
                         }
                         lastCoords = [result[0], result[1]];
-                        
+                        moveMarker();
                     }
                 }
             }            
@@ -136,7 +159,6 @@
             }
 
             function changeBoundaryValues(valArray) {
-                console.log(valArray);
                 let xmlhttp = new XMLHttpRequest();   // new HttpRequest instance 
                 let url = '/api/setBoundaries/';
                 xmlhttp.open("POST", url);
@@ -164,18 +186,18 @@
         <table>
         <tr>
             <td>
-                <p>x-min(-1 to 1): <input type='text' id='xmin' value='-1'></input></p>
+                <p>x-min(-1 to 1): <input type='number' id='xmin' value='-1'></input></p>
             </td>
             <td>
-                <p>x-max(>x-min to 1): <input type='text' id='xmax' value='1'></input></p>
+                <p>x-max(>x-min to 1): <input type='number' id='xmax' value='1'></input></p>
             </td>
         </tr>
         <tr>
             <td>
-                <p>y-min(-1 to 1): <input type='text' id='ymin' value='-1'></input></p>
+                <p>y-min(-1 to 1): <input type='number' id='ymin' value='-1'></input></p>
             </td>
             <td>
-                <p>y-max(>y-min to 1): <input type='text' id='ymax' value='1'></input></p>
+                <p>y-max(>y-min to 1): <input type='number' id='ymax' value='1'></input></p>
             </td>
         </tr>
          </table>

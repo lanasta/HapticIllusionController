@@ -5,11 +5,12 @@ const express = require('express');
 const path = require('path');
 const app = express();
 app.use(express.json());
-var dgram = require('dgram');
+let dgram = require('dgram');
 const server = dgram.createSocket('udp4');
 let lastCoords = [];
 let frictionValue = 1;
 let boundariesArray = [-1, 1, -1, 1]; //xmin, xmax, ymin, ymax
+let taperBoundaries = true;
 
 app.post('/api/setBoundaries', async (req, res) => {
     res.json({requestBody: req.body});
@@ -33,7 +34,11 @@ server.on('listening', function() {
 server.on('message', function(message, remote) {
     const msg = message.toString();
     const xyCoords = parseMessage(msg);
-    sendHapticFeedback(xyCoords);
+    xyCoords[0] = Number(xyCoords[0]);
+    xyCoords[1] = 0 - xyCoords[1]; //for some reason the compliance driver code returns y with a flipped sign
+    if (JSON.stringify(xyCoords) != JSON.stringify(lastCoords)) {
+        sendHapticFeedback(xyCoords);
+    }
 });
 
 server.bind(PORT, HOST);
@@ -46,12 +51,14 @@ function parseMessage(msg){
 
 function sendHapticFeedback(xyCoords) {
     if (JSON.stringify(lastCoords) == JSON.stringify(xyCoords)) return;
-    console.log("F: " + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
+   console.log("F: " + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
     xyCoords = checkBoundaries(xyCoords);
+    xyCoords[0] = parseFloat(xyCoords[0]);
+    xyCoords[1] = 0 - xyCoords[1];
     var message = new Buffer("F: " + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
     server.send(message, 0, message.length, "8888", HOST, function(err, bytes) {
         if (err) throw err;
-        console.log('UDP message ' +  message.toString() + ' sent to ' + HOST +':'+ PORT);
+            console.log('UDP message ' +  message.toString() + ' sent to ' + HOST +':'+ PORT);
     });
     lastCoords = xyCoords;
 }
@@ -59,7 +66,6 @@ function sendHapticFeedback(xyCoords) {
 function checkBoundaries(xyCoords) {
     let x = parseFloat(xyCoords[0]);
     let y = parseFloat(xyCoords[1]);
-
     if (x < boundariesArray[0]) {
         xyCoords[0] = boundariesArray[0];
     }
@@ -71,6 +77,31 @@ function checkBoundaries(xyCoords) {
     }
     if (y > boundariesArray[3]) {
         xyCoords[1] = boundariesArray[3];
+    }
+    
+    if (taperBoundaries && x != 0) {
+        let quad1And3Func = parseFloat(-1/(10*x));
+        let quad2And4Func = parseFloat(1/(10*x));
+        if (x < 0 && y > 0 ) {
+            if (y > quad1And3Func ) {
+                xyCoords[1] = quad1And3Func;
+            }
+        }
+        if ( x > 0 && y < 0) {
+            if (y < quad1And3Func) {
+                xyCoords[1] = quad1And3Func;
+            }
+        }
+        if (x > 0 && y > 0) {
+            if (y > quad2And4Func) {
+                xyCoords[1] = quad2And4Func;
+            }
+        }
+        if (x < 0 && y < 0) {
+            if (y < quad2And4Func) {
+                xyCoords[1] = quad2And4Func;
+            }
+        }
     }
     return xyCoords;
 }
