@@ -10,7 +10,8 @@ const server = dgram.createSocket('udp4');
 let lastCoords = [];
 let frictionValue = 1;
 let boundariesArray = [-1, 1, -1, 1]; //xmin, xmax, ymin, ymax
-let taperBoundaries = true;
+let taperBoundaries = false;
+let stickySpots = true;
 
 app.post('/api/setBoundaries', async (req, res) => {
     res.json({requestBody: req.body});
@@ -20,6 +21,8 @@ app.post('/api/setBoundaries', async (req, res) => {
 
 app.post('/api/setFriction/:frictionValue', async (req, res) => {
     frictionValue = req.params.frictionValue;
+    res.json(frictionValue);
+    console.log('Fric val', frictionValue);
 })
 
 app.get('/api/currentPosition', async (req, res) => {
@@ -49,18 +52,41 @@ function parseMessage(msg){
     return xyCoords;
 }
 
-function sendHapticFeedback(xyCoords) {
+function sendHapticFeedback(xyCoords, stickyFeedback) {
     if (JSON.stringify(lastCoords) == JSON.stringify(xyCoords)) return;
-   console.log("F: " + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
     xyCoords = checkBoundaries(xyCoords);
     xyCoords[0] = parseFloat(xyCoords[0]);
+    if (!stickyFeedback) {
+        if ((xyCoords[0] > -0.2 &&  xyCoords[0] <= 0.2) && ((xyCoords[1] > 0.4 &&  xyCoords[1] <= 0.75) || (xyCoords[1] > 1 &&  xyCoords[1] <= 2))) {
+            xyCoords = [0,0];
+        }
+    }
     xyCoords[1] = 0 - xyCoords[1];
-    var message = new Buffer("F: " + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
+    var vibrationType = checkIfAlongXYAxis(xyCoords) ? "B: " : "F: ";
+    var message = new Buffer(vibrationType + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
+    console.log(vibrationType + xyCoords[0]/frictionValue + ", " + xyCoords[1]/frictionValue);
     server.send(message, 0, message.length, "8888", HOST, function(err, bytes) {
         if (err) throw err;
-            console.log('UDP message ' +  message.toString() + ' sent to ' + HOST +':'+ PORT);
+          //  console.log('UDP message ' +  message.toString() + ' sent to ' + HOST +':'+ PORT);`
     });
     lastCoords = xyCoords;
+}
+
+function checkIfAlongXYAxis(xyCoords) {
+    if ((xyCoords[0] > -0.2 && xyCoords[0] < 0.2) || (xyCoords[1] > -0.2 && xyCoords[1] < 0.2)) {
+        return true;
+    }
+    return false;
+}
+
+function evaluateStickySpots(xyCoords) {
+    //0-0.3 ok, 0.3-0.7 sticky, 0.7-1 ok
+    var absoluteY = Math.abs(xyCoords[1]);
+    var distance = absoluteY + 0.2;
+    if (absoluteY > 0.3 && absoluteY <= 0.7) {
+        sendHapticFeedback([0,0], true);
+    }
+    return xyCoords;
 }
 
 function checkBoundaries(xyCoords) {

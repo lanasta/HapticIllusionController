@@ -25,6 +25,7 @@ body {
     height: 15px;
     background: #d3d3d3;
     outline: none;
+    margin-bottom: 1.5em;
     opacity: 0.7;
     -webkit-transition: .2s;
     transition: opacity .2s;

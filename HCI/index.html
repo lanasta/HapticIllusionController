@@ -45,8 +45,6 @@
             function getMarkerPos(offset) {
                 var xPos = parseFloat(offset.left/100);
                 var yPos = parseFloat((0 - offset.top)/100);
-                $('#posX').text('x: ' + xPos.toFixed(2));
-                $('#posY').text('y: ' + yPos.toFixed(2));
             }
  
             $('#setBoundaries').click(() => {
@@ -69,18 +67,12 @@
             $('input[type=range]').on('input', function () {
                 $(this).trigger('change');
             });
-            $('#frictionSlider').change( function() { 
-                $("#frictionValue").text($(this).val());
-                var frictionVal = correspondingHardness[$(this).val()];
-                var offset =  $("#draggable").position();
-                $("#draggable").css({'top': offset.top/frictionVal, 'left' : offset.left/frictionVal});
-                $("#draggable").draggable({distance: 20/frictionVal});
-                changeFrictionValue(frictionVal);
-            });
 
-            window.setInterval(function(){
-                getCurrentPos();
-            }, 30);
+            $('#setFrictionVal').click(() => {
+                $("#frictionValue").text($("#frictionSlider").val());
+                var frictionVal = correspondingHardness[$("#frictionSlider").val()];
+                changeFrictionValue(frictionVal);
+            })
 
             function moveMarker() {
                 var left =  lastCoords[0] * 100;
@@ -140,7 +132,6 @@
                         alert(`Error ${xhr.status}: ${xhr.statusText}`); // e.g. 404: Not Found
                     } else { // show the result
                         let result = JSON.parse(xhr.response);
-                        console.log(result);
                         if (result.length < 1) {
                             return;
                         }
@@ -155,7 +146,7 @@
                 let url = '/api/setFriction/' + frictionValue;
                 xmlhttp.open("POST", url);
                 xmlhttp.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
-                xmlhttp.send();   
+                xmlhttp.send();
             }
 
             function changeBoundaryValues(valArray) {
@@ -206,6 +197,8 @@
 
         <p>Feedback Friction: <span id="frictionValue">0</span></p>
         <input type="range" min="0" max="4" value="0" class="slider" id="frictionSlider">
+        <button id='setFrictionVal'>Set friction value</button>
+
     </div>
 </div>
 </body>
